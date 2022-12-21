@@ -11,7 +11,9 @@ use tokio_socks::tcp::Socks5Stream;
 use tokio_socks::Error;
 use tower::Service;
 
-#[derive(Clone)]
+pub mod maybe;
+
+#[derive(Debug, Clone)]
 pub struct TorConnector {
     proxy_addr: SocketAddr,
 }
@@ -73,7 +75,7 @@ impl AsyncRead for TorStream {
 impl Service<Uri> for TorConnector {
     type Response = TorStream;
     type Error = Error;
-    type Future = BoxFuture<'static, Result<TorStream, Error>>;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(
         &mut self,
@@ -113,14 +115,15 @@ mod tests {
     async fn get_torproject_page() {
         let client: Client<TorConnector, Body> =
             Client::builder().build(TorConnector::new(([127, 0, 0, 1], 9050).into()).unwrap());
-        let res = client
+        assert!(client
             .get(
                 "http://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion"
                     .parse()
                     .unwrap(),
             )
             .await
-            .unwrap();
-        assert!(res.status().is_success())
+            .unwrap()
+            .status()
+            .is_success());
     }
 }
