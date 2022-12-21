@@ -143,9 +143,13 @@ mod tests {
 
     #[tokio::test]
     async fn get_torproject_page() {
+        #[cfg(feature = "socks")]
+        let tor = TorConnector::new(([127, 0, 0, 1], 9050).into()).unwrap();
+        #[cfg(feature = "arti")]
+        let tor = TorConnector::new().unwrap();
         let client: Client<MaybeTorConnector, Body> =
             Client::builder().build(MaybeTorConnector::Hybrid {
-                tor: TorConnector::new(([127, 0, 0, 1], 9050).into()).unwrap(),
+                tor,
                 clearnet: HttpConnector::new(),
             });
         assert!(client

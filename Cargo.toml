@@ -2,15 +2,29 @@
 name = "hyper-tor-connector"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+readme = "README.md"
+description = "A hyper connector for making tor connections"
+keywords = ["hyper", "http", "tor", "socks", "arti"]
+documentation = "https://docs.rs/hyper-tor-connector"
+repository = "https://github.com/dr-bonez/hyper-tor-connector"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = ["socks"]
+socks = ["tokio-socks"]
+arti = ["arti-client", "tor-rtcompat"]
+
 [dependencies]
 futures = "0.3"
 hyper = { version = "0.14", features = ["client", "http1", "tcp"] }
 pin-project = "1.0"
 tokio = "1.23"
-tokio-socks = "0.5"
 tower = "0.4"
+
+tokio-socks = { version = "0.5", optional = true }
+
+arti-client = { version = "0.8", features = ["tokio"], optional = true }
+tor-rtcompat = { version = "0.8", features = ["tokio"], optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.23.0", features = ["full"] }
