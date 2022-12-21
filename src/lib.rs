@@ -8,7 +8,7 @@ use hyper::Uri;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio_socks::tcp::Socks5Stream;
-use tokio_socks::Error;
+pub use tokio_socks::Error;
 use tower::Service;
 
 pub mod maybe;
