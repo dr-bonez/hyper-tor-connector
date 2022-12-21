@@ -5,18 +5,12 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-arti-client = { version = "1.2", features = ["tokio"] }
 futures = "0.3"
-hyper = { version = "0.14", features = ["client", "http1"] }
+hyper = { version = "0.14", features = ["client", "http1", "tcp"] }
 pin-project = "1.0"
 tokio = "1.23"
-tor-rtcompat = { version = "1.2", features = ["tokio"] }
+tokio-socks = "0.5"
 tower = "0.4"
 
 [dev-dependencies]
 tokio = { version = "1.23.0", features = ["full"] }
-
-[features]
-default = ["native-tls"]
-native-tls = ["arti-client/native-tls", "tor-rtcompat/native-tls"]
-rustls = ["arti-client/rustls", "tor-rtcompat/rustls"]

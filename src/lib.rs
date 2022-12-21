@@ -1,37 +1,31 @@
-use std::sync::Arc;
+use std::net::SocketAddr;
 use std::task::Poll;
 
-use arti_client::{BootstrapBehavior, TorClient};
-use arti_client::{DataStream, Error};
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use hyper::client::connect::{Connected, Connection};
 use hyper::Uri;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tor_rtcompat::PreferredRuntime;
+use tokio::net::TcpStream;
+use tokio_socks::tcp::Socks5Stream;
+use tokio_socks::Error;
 use tower::Service;
 
 #[derive(Clone)]
 pub struct TorConnector {
-    tor_client: Arc<TorClient<PreferredRuntime>>,
+    proxy_addr: SocketAddr,
 }
 impl TorConnector {
-    pub fn new() -> Result<Self, Error> {
-        Ok(Self {
-            tor_client: Arc::new(
-                TorClient::builder()
-                    .bootstrap_behavior(BootstrapBehavior::OnDemand)
-                    .create_unbootstrapped()?,
-            ),
-        })
+    pub fn new(proxy_addr: SocketAddr) -> Result<Self, Error> {
+        Ok(Self { proxy_addr })
     }
 }
 
 #[pin_project::pin_project]
-pub struct TorStream(#[pin] pub DataStream);
+pub struct TorStream(#[pin] pub Socks5Stream<TcpStream>);
 impl Connection for TorStream {
     fn connected(&self) -> Connected {
-        Connected::new()
+        self.0.connected()
     }
 }
 impl AsyncWrite for TorStream {
@@ -89,15 +83,20 @@ impl Service<Uri> for TorConnector {
     }
 
     fn call(&mut self, req: Uri) -> Self::Future {
-        let client = self.tor_client.clone();
+        let proxy = self.proxy_addr;
         async move {
             Ok::<_, Error>(TorStream(
-                client
-                    .connect(dbg!((
+                Socks5Stream::connect(
+                    proxy,
+                    (
                         req.host().unwrap_or_default(),
-                        req.port_u16().unwrap_or(80)
-                    )))
-                    .await?,
+                        req.port_u16().unwrap_or(match req.scheme_str() {
+                            Some("https") | Some("wss") => 443,
+                            _ => 80,
+                        }),
+                    ),
+                )
+                .await?,
             ))
         }
         .boxed()
@@ -113,7 +112,7 @@ mod tests {
     #[tokio::test]
     async fn get_torproject_page() {
         let client: Client<TorConnector, Body> =
-            Client::builder().build(TorConnector::new().unwrap());
+            Client::builder().build(TorConnector::new(([127, 0, 0, 1], 9050).into()).unwrap());
         let res = client
             .get(
                 "http://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion"
